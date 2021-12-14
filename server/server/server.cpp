@@ -94,7 +94,7 @@ SOCKET FindSocket(int id)
 }
 int ProcessRequest(SOCKET sClient, char* buffer)
 {
-	printf("start process");
+	printf("start process\n");
 	if (buffer[0] != '#')
 	{
 		printf("expected #, but %c found.\n", buffer[0]);
@@ -129,11 +129,10 @@ int ProcessRequest(SOCKET sClient, char* buffer)
 		{
 			dest = FindSocket(id);
 			std::string info = "#4*";
-			info += std::to_string(id);
-			info += "*";
-			for (int i = y + 1;;i++)
+			int n = packet.length();
+			for (int i = y + 1;i<n-1;i++)
 			{
-				if (packet[i] == '$') break;
+				//if (packet[i] == '$') break;
 				info += packet[i];
 			}
 			info += "$";
@@ -182,7 +181,7 @@ void solve(SOCKET sClient)
 		{
 			printf("rev() error!\n");
 			closesocket(sClient);
-			return;
+			finish = 1;
 		}
 	}
 	closesocket(sClient);
@@ -232,7 +231,7 @@ int main()
 
 	while (1)
 	{
-		printf("start solve");
+		//printf("start solve");
 		int szClntAddr = sizeof(clntAddr);
 		sClient = accept(sListen, (SOCKADDR*)&clntAddr, &szClntAddr);
 		if (sClient == INVALID_SOCKET)

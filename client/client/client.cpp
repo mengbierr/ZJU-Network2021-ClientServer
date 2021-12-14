@@ -23,7 +23,7 @@ void info()
 int connection_count = 0;
 int receive(SOCKET connect_socket)
 {
-	printf("receive");
+	//printf("receive");
 	char buffer[MAXN];
 	int flag;
 	do
@@ -33,7 +33,7 @@ int receive(SOCKET connect_socket)
 		if (flag > 0)
 		{
 			std::string message = buffer;
-			printf("%s\n", buffer);
+			//printf("%s\n", buffer);
 			int x = message.find("#") + 1;
 
 			char op = message[x];
@@ -102,18 +102,18 @@ int receive(SOCKET connect_socket)
 			else if (op == '4')
 			{
 				int y = message.find("*");
-				int id = 0;
-				for (int i = x + 2;i < y;i++)
+				printf("get message:\n");
+				int idx = message.find("*", y + 1);
+				int len = 0;
+				for (int i = y + 1;i < idx; i++)
 				{
-					id = id * 10 + message[i] - '0';
+					len = len * 10 + message[i] - '0';
 				}
-				printf("get message from %d:\n", id);
-				int z = message.find("$");
-				y = message.find("*", y + 1);
-				for (int i = y + 1;i < z;i++)
+				for (int i = idx + 1;i < idx+1+len;i++)
 				{
 					std::cout << message[i];
 				}
+				puts("");
 				Message.notify_one();
 			}
 			else if (op == 'A')
@@ -146,9 +146,9 @@ void AskName(SOCKET connect_socket)
 	send(connect_socket, data, (int)strlen(data), 0);
 
 	std::unique_lock<std::mutex> lck(mutex_name);
-	printf("start wait\n");
+	//printf("start wait\n");
 	Name.wait(lck);
-	printf("wait ok\n");
+	//printf("wait ok\n");
 }
 void AskUser(SOCKET connect_socket)
 {
@@ -168,7 +168,8 @@ void TrySendMessage(SOCKET connect_socket)
 	getchar();
 	std::cout << "Please input your message, press enter to finish" << std::endl;
 	std::cin.getline(message, MAXN << 1);
-	sprintf(data, "#4*%d*%s$",id,message);
+	int n = strlen(message);
+	sprintf(data, "#4*%d*%d*%s$", id, n, message);
 	//printf("%s", data);
 	send(connect_socket, data, (int)strlen(data), 0);
 	std::unique_lock<std::mutex> lck(mutex_message);
@@ -247,7 +248,7 @@ int main()
 					while (1)
 					{
 
-						printf("ok");
+						//printf("ok");
 						info();
 						int op;
 						std::cin >> op;
