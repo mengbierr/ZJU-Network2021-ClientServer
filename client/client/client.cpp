@@ -18,7 +18,7 @@ std::condition_variable User;
 std::condition_variable Message;
 void info()
 {
-	printf("input the operation number:1. connect 2. exit\n");
+	printf("input the operation number:1. connect 2. exit 3. get server time 4. get server name 5. get user list 6. send a message\n");
 }
 int connection_count = 0;
 int receive(SOCKET connect_socket)
@@ -33,7 +33,7 @@ int receive(SOCKET connect_socket)
 		if (flag > 0)
 		{
 			std::string message = buffer;
-			//printf("%s\n", buffer);
+			printf("%s\n", buffer);
 			int x = message.find("#") + 1;
 
 			char op = message[x];
@@ -102,27 +102,32 @@ int receive(SOCKET connect_socket)
 			else if (op == '4')
 			{
 				int y = message.find("*");
-				printf("get message:\n");
+				printf("get message from ");
 				int idx = message.find("*", y + 1);
+				for (int i = y + 1;i < idx;i++) std::cout << message[i];
+				printf(":\n");
 				int len = 0;
-				for (int i = y + 1;i < idx; i++)
+				y = message.find("*", idx + 1);
+				for (int i = idx + 1;i < y; i++)
 				{
 					len = len * 10 + message[i] - '0';
 				}
-				for (int i = idx + 1;i < idx+1+len;i++)
+				for (int i = y + 1;i < y+1+len;i++)
 				{
 					std::cout << message[i];
 				}
 				puts("");
-				Message.notify_one();
+				
 			}
 			else if (op == 'A')
 			{
 				printf("Message has been sent.\n");
+				Message.notify_one();
 			}
 			else if (op == 'E')
 			{
 				printf("No such destination!\n");
+				Message.notify_one();
 			}
 		}
 		else if (flag == 0) Time.notify_one(), printf("Connection closed.\n");

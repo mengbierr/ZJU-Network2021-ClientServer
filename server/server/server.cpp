@@ -127,9 +127,20 @@ int ProcessRequest(SOCKET sClient, char* buffer)
 		}
 		if (exist_id(id))
 		{
+			SOCKADDR_IN client_info = { 0 };
+			int addrsize = sizeof(client_info);
+			lock.lock();
+			getpeername(sClient, (struct sockaddr*)&client_info, &addrsize);
+			char* ip = inet_ntoa(client_info.sin_addr);
+			int port = client_info.sin_port;
+			lock.unlock();
 			dest = FindSocket(id);
 			std::string info = "#4*";
+			info += ip;
+			info += ":";
+			info += std::to_string(port);
 			int n = packet.length();
+			info += "*";
 			for (int i = y + 1;i<n-1;i++)
 			{
 				//if (packet[i] == '$') break;
