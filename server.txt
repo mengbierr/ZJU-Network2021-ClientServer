@@ -1,0 +1,153 @@
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#include<cstdio>
+#include<winsock2.h>
+#include<thread>
+#include<mutex>
+#include<vector>
+#define DEFAULT_PORT 4579
+#define MAXN 512
+std::mutex lock;
+struct Client
+{
+	char* ip;
+	int port;
+	int id;
+	std::thread::id thread_id;
+	SOCKET socket;
+};
+std::vector<struct Client*> client_list;
+int count = 0;
+void Send(SOCKET sClient, std::string ans)
+{
+	char cans[MAXN];
+	memset(cans, 0, sizeof(cans));
+	strcpy(cans, ans.c_str());
+	int len = ans.length();
+	send(sClient, cans, len, 0);
+}
+void OutputTime(SOCKET sClient)
+{
+	printf("start send");
+	using std::chrono::system_clock;
+	std::string ans = "#T*";
+	Send(sClient, ans);
+}
+int ProcessRequest(SOCKET sClient, char* buffer)
+{
+	printf("start process");
+	if (buffer[0] != '#')
+	{
+		printf("expected #, but %c found.\n", buffer[0]);
+		return -1;
+	}
+	char op = buffer[1];
+	if (op == 'T')
+	{
+		OutputTime(sClient);
+	}
+	return 1;
+}
+void solve(SOCKET sClient)
+{
+	SOCKADDR_IN client_info = { 0 };
+	int addrsize = sizeof(client_info);
+	std::thread::id thread_id = std::this_thread::get_id();
+	getpeername(sClient, (struct sockaddr*)&client_info, &addrsize);
+	char* ip = inet_ntoa(client_info.sin_addr);
+	int port = client_info.sin_port;
+	Client now;
+	now.socket = sClient;now.ip = ip;now.id = count++;
+	now.port = port;now.thread_id = thread_id;
+	Client* pnow = &now;
+	lock.lock();
+	client_list.push_back(pnow);
+	lock.unlock();
+	bool finish = 0;
+	char buffer[MAXN] = "\0";
+	if (!finish)
+	{
+		ZeroMemory(buffer, MAXN);
+		int state = recv(sClient, buffer, MAXN, 0);
+		if (state > 0)
+		{
+			ProcessRequest(sClient, buffer);
+		}
+		else if (state == 0)
+		{
+			printf("Connection closed.\n");
+			finish = 1;
+		}
+		else
+		{
+			printf("rev() error!\n");
+			closesocket(sClient);
+			return;
+		}
+	}
+	closesocket(sClient);
+	std::vector<Client*>::iterator it;
+	for (it = client_list.begin();it != client_list.end();it++)
+	{
+		if ((*it)->id == now.id && (*it)->ip == pnow->ip) break;
+	}
+	lock.lock();
+	client_list.erase(it);
+	count--;
+	lock.unlock();
+	return;
+}
+int main()
+{
+	WSADATA wsaData;
+	SOCKET sListen, sClient;
+	SOCKADDR_IN servAddr, clntAddr;
+	if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+	{
+		printf("WSAStartup() error!\n");
+		return 0;
+	}
+	sListen = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+	if (sListen == INVALID_SOCKET)
+	{
+		printf("socket() error");
+		return 0;
+	}
+	servAddr.sin_family = AF_INET;
+	servAddr.sin_addr.s_addr = htonl(INADDR_ANY);
+	servAddr.sin_port = htons(DEFAULT_PORT);
+	if (bind(sListen, (SOCKADDR*)&servAddr, sizeof(servAddr)) == SOCKET_ERROR)
+	{
+		printf("bind() error! code:%d\n", WSAGetLastError());
+		closesocket(sListen);
+		return 0;
+	}
+
+	if (listen(sListen, 5) == SOCKET_ERROR)
+	{
+		printf("listen() error! code:%d\n", WSAGetLastError());
+		closesocket(sListen);
+		return 0;
+	}
+
+
+	while (1)
+	{
+		printf("start solve");
+		int szClntAddr = sizeof(clntAddr);
+		sClient = accept(sListen, (SOCKADDR*)&clntAddr, &szClntAddr);
+		if (sClient == INVALID_SOCKET)
+		{
+			printf("accept() error! code:%d\n", WSAGetLastError());
+			closesocket(sClient);
+			return 0;
+		}
+
+		printf("%s\n", inet_ntoa(clntAddr.sin_addr));
+		std::thread(solve, std::ref(sClient)).detach();
+	}
+
+	closesocket(sListen);
+	WSACleanup();
+	return 0;
+}

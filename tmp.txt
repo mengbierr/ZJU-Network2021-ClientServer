@@ -1,0 +1,145 @@
+#define _WINSOCK_DEPRECATED_NO_WARNINGS
+#define _CRT_SECURE_NO_WARNINGS
+#include<winsock2.h>
+#include<ws2tcpip.h>
+#include<cstdio>
+#include<iostream>
+#include<thread>
+#include<mutex>
+#define MAXN 512
+#define DEFAULT_PORT "4579"
+std::mutex mutex_time;
+std::condition_variable Time;
+void info()
+{
+	printf("input the operation number:1. connect 2. exit\n");
+}
+int connection_count = 0;
+int receive(SOCKET connect_socket)
+{
+	printf("receive");
+	char buffer[MAXN];
+	memset(buffer, 0, sizeof(buffer));
+	int flag;
+	do
+	{
+		flag = recv(connect_socket, buffer, MAXN, 0);
+		if (flag > 0)
+		{
+			std::cout << "in";
+			printf("%s\n", buffer);
+			printf("notify\n");
+			Time.notify_one();
+		}
+		else if (flag == 0) Time.notify_one(),printf("Connection closed.\n");
+		else printf("recv() failed!\n");
+	} while (flag > 0);
+	return 0;
+}
+void AskTime(SOCKET connect_socket)
+{
+	char data[] = "#T$";
+	send(connect_socket, data, (int)strlen(data), 0);
+	
+	std::unique_lock<std::mutex> lck(mutex_time);
+	printf("start wait\n");
+	Time.wait(lck);
+	printf("wait ok\n");
+}
+int main()
+{
+	WSADATA wsaData;
+	addrinfo* result = NULL, *p;
+	addrinfo hints;
+	while (1)
+	{
+		info();
+		int op;
+		char ip[MAXN];
+		SOCKET connect_socket = INVALID_SOCKET;
+		std::cin >> op;
+		if (op == 1)
+		{
+			printf("please input ip:\n");
+			std::cin >> ip;
+			if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+			{
+				printf("WSAStartup() error!\n");
+				return 0;
+			}
+			ZeroMemory(&hints, sizeof(hints));
+			hints.ai_family = AF_UNSPEC;
+			hints.ai_socktype = SOCK_STREAM;
+			hints.ai_protocol = IPPROTO_TCP;
+			if (getaddrinfo(ip, DEFAULT_PORT, &hints, &result) != 0)
+			{
+				std::cout << "getaddinfo error!" << std::endl;
+				WSACleanup();
+				continue;
+			}
+			int success = 1;
+			for (p = result;p != NULL;p = p->ai_next)
+			{
+				if ((connect_socket=socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == INVALID_SOCKET)
+
+				{
+					success = 0;
+					printf("socket() error\n");
+					WSACleanup();
+				}
+				if (connect(connect_socket, p->ai_addr, (int)p->ai_addrlen)==SOCKET_ERROR)
+				{
+					closesocket(connect_socket);
+					connect_socket = INVALID_SOCKET;
+					printf("connect() error!\n");
+				}
+				break;
+			}
+			if (success)
+			{
+				freeaddrinfo(result);
+				if (connect_socket == INVALID_SOCKET)
+				{
+					std::cout << "connect to server error!" << std::endl;
+					WSACleanup();
+					continue;
+				}
+				else
+				{
+					std::cout << "connect successfully!" << std::endl;
+					SOCKADDR_IN clientInfo = { 0 };
+					int addr_size = sizeof(clientInfo);
+					std::thread::id id = std::this_thread::get_id();
+
+					getpeername(connect_socket, (sockaddr*)&clientInfo, &addr_size);
+					char* ip = inet_ntoa(clientInfo.sin_addr);
+					int port = clientInfo.sin_port;
+					std::thread(receive, std::move(connect_socket)).detach();
+
+					while (1)
+					{
+
+						printf("ok");
+						info();
+						int op;
+						std::cin >> op;
+						if (op == 1)
+						{
+							printf("You have already connected.");
+						}
+						if (op == 3)
+						{
+							AskTime(connect_socket);
+						}
+					}
+				}
+			}
+
+		}
+		else if (op == 2)
+		{
+			printf("exit.");
+			return 0;
+		}
+	}
+}
