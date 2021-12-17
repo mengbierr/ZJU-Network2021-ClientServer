@@ -6,7 +6,7 @@
 #include<mutex>
 #include<vector>
 #include<string>
-#define DEFAULT_PORT 4579
+#define DEFAULT_PORT 5224
 #define SERVER_NAME "ARC-POTATO"
 #define MAXN 512
 std::mutex lock;

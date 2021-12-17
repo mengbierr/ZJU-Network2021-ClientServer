@@ -7,7 +7,7 @@
 #include<thread>
 #include<mutex>
 #define MAXN 512
-#define DEFAULT_PORT "4579"
+#define DEFAULT_PORT "5224"
 std::mutex mutex_time;
 std::mutex mutex_name;
 std::mutex mutex_user;
