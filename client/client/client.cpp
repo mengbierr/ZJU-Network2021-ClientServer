@@ -1,11 +1,15 @@
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #define _CRT_SECURE_NO_WARNINGS
+
+#pragma comment(ws2_32, "ws2_32.lib")
+
 #include<winsock2.h>
 #include<ws2tcpip.h>
 #include<cstdio>
 #include<iostream>
 #include<thread>
 #include<mutex>
+#include<condition_variable>
 #define MAXN 512
 #define DEFAULT_PORT "5224"
 std::mutex mutex_time;
@@ -188,10 +192,12 @@ int main()
 	while (1)
 	{
 		info();
+		std::string s;
 		int op;
 		char ip[MAXN];
 		SOCKET connect_socket = INVALID_SOCKET;
-		std::cin >> op;
+		std::cin >> s; 
+		op = atoi((s.c_str()));
 		if (op == 1)
 		{
 			printf("please input ip:\n");
@@ -284,6 +290,9 @@ int main()
 						{
 							TrySendMessage(connect_socket);
 						}
+						
+					//	fflush(stdout);
+						
 					}
 				}
 			}
@@ -302,5 +311,12 @@ int main()
 		{
 		printf("invalid operation");
 		}
+		
+		
 	}
 }
+/*
+
+1111.1.1.1
+
+*/
