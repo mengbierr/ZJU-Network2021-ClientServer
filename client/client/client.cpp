@@ -37,7 +37,7 @@ int receive(SOCKET connect_socket)
 		if (flag > 0)
 		{
 			std::string message = buffer;
-			printf("%s\n", buffer);
+			//printf("%s\n", buffer);
 			int x = message.find("#") + 1;
 
 			char op = message[x];
